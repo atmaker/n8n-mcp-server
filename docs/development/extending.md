@@ -190,6 +190,100 @@ describe('My Tool', () => {
 });
 ```
 
+## Using the Pagination Utility
+
+The server provides a reusable pagination utility in `src/utils/pagination.ts` that should be used when implementing list-type tools that might return large amounts of data. This ensures consistent pagination behavior across all tools.
+
+### Pagination Interfaces
+
+```typescript
+// Pagination parameters interface
+export interface PaginationParams {
+  offset?: number;
+  limit?: number;
+}
+
+// Pagination metadata interface
+export interface PaginationMetadata {
+  offset: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+  nextOffset: number | null;
+  prevOffset: number | null;
+}
+
+// Interface for a paginated result
+export interface PaginatedResult<T> {
+  data: T[];
+  pagination: PaginationMetadata;
+}
+```
+
+### Using the Pagination Utility in a Tool Handler
+
+```typescript
+import { paginateResults, PaginationParams } from '../../utils/pagination.js';
+
+export async function handleListTool(
+  client: N8nClient,
+  params: ListToolParams
+): Promise<ToolCallResponse> {
+  try {
+    // Fetch all items from the API
+    const items = await client.getItems();
+    
+    // Apply pagination
+    const paginationParams: PaginationParams = {
+      offset: params.offset,
+      limit: params.limit
+    };
+    
+    const result = paginateResults(items, paginationParams);
+    
+    return {
+      content: result.data,
+      metadata: {
+        pagination: result.pagination
+      }
+    };
+  } catch (error) {
+    // Handle errors...
+  }
+}
+```
+
+### Adding Pagination Parameters to Tool Definitions
+
+When creating tools that return lists of items, include the pagination parameters in your tool definition:
+
+```typescript
+export function getListToolDefinition(): ToolDefinition {
+  return {
+    name: 'list_tool',
+    description: 'Lists items with pagination support',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        // Other parameters...
+        
+        // Pagination parameters
+        offset: {
+          type: 'number',
+          description: 'Number of items to skip (pagination offset)',
+          default: 0
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of items to return per page',
+          default: 10
+        }
+      }
+    }
+  };
+}
+```
+
 ## Adding a New Resource
 
 Resources in the MCP server provide data access through URI-based templates. To add a new resource, follow these steps:

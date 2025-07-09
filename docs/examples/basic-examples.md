@@ -11,7 +11,7 @@ This page provides basic examples of using the n8n MCP Server with AI assistants
 ### Assistant Actions
 
 ```javascript
-// The assistant uses the workflow_list tool
+// The assistant uses the workflow_list tool with default pagination (first 10 workflows)
 const result = await useMcpTool('n8n-mcp-server', 'workflow_list', {});
 
 // The assistant formats and presents the results
@@ -19,6 +19,31 @@ if (result.length === 0) {
   return "You don't have any workflows in your n8n instance yet.";
 } else {
   let response = "Here are your workflows:\n\n";
+  result.forEach(workflow => {
+    response += `- ${workflow.name} (ID: ${workflow.id}) - ${workflow.active ? 'Active' : 'Inactive'}\n`;
+  });
+  return response;
+}
+```
+
+### User Prompt
+
+"Show me the next page of workflows."
+
+### Assistant Actions
+
+```javascript
+// The assistant uses pagination to fetch the next page of workflows
+const result = await useMcpTool('n8n-mcp-server', 'workflow_list', {
+  offset: 10, // Skip the first 10 workflows (that were already shown)
+  limit: 10   // Show the next 10 workflows
+});
+
+// The assistant formats and presents the results
+if (result.length === 0) {
+  return "There are no more workflows to display.";
+} else {
+  let response = "Here are more workflows:\n\n";
   result.forEach(workflow => {
     response += `- ${workflow.name} (ID: ${workflow.id}) - ${workflow.active ? 'Active' : 'Inactive'}\n`;
   });

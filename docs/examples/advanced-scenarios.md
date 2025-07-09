@@ -26,11 +26,26 @@ for (const workflow of workflows) {
     id: workflow.id
   });
   
-  // Get recent executions
-  const executions = await useMcpTool('n8n-mcp-server', 'execution_list', {
+  // Get the most recent executions with pagination
+  const recentExecutions = await useMcpTool('n8n-mcp-server', 'execution_list', {
     workflowId: workflow.id,
-    limit: 10
+    limit: 10,  // Retrieve only 10 executions per page
+    offset: 0   // Start with the first page
   });
+  
+  // Get older executions if necessary (pagination example)
+  let olderExecutions = [];
+  if (recentExecutions.length === 10) {
+    // If we got a full page, there might be more executions
+    olderExecutions = await useMcpTool('n8n-mcp-server', 'execution_list', {
+      workflowId: workflow.id,
+      limit: 10,   // Retrieve another 10 executions
+      offset: 10   // Skip the first 10 that we've already seen
+    });
+  }
+  
+  // Combine recent and older executions for analysis
+  const executions = [...recentExecutions, ...olderExecutions];
   
   // Analyze workflow structure
   const nodeCount = details.nodes.length;

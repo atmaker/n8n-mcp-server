@@ -21,6 +21,14 @@ Lists all workflows with optional filtering.
     "active": {
       "type": "boolean",
       "description": "Filter workflows by active status"
+    },
+    "offset": {
+      "type": "number",
+      "description": "Number of items to skip (for pagination). Default is 0."
+    },
+    "limit": {
+      "type": "number",
+      "description": "Maximum number of items to return. Default is 10."
     }
   },
   "required": []
@@ -38,6 +46,16 @@ const activeWorkflows = await useWorkflowList({ active: true });
 
 // List only inactive workflows
 const inactiveWorkflows = await useWorkflowList({ active: false });
+
+// Paginate results - second page of 5 items per page
+const paginatedWorkflows = await useWorkflowList({ limit: 5, offset: 5 });
+
+// Combine filtering and pagination
+const paginatedActiveWorkflows = await useWorkflowList({ 
+  active: true,
+  limit: 10,
+  offset: 20 // Show page 3 (items 21-30)
+});
 ```
 
 **Response:**
