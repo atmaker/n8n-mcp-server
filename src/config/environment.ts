@@ -18,6 +18,7 @@ export const ENV_VARS = {
   N8N_WEBHOOK_USERNAME: 'N8N_WEBHOOK_USERNAME',
   N8N_WEBHOOK_PASSWORD: 'N8N_WEBHOOK_PASSWORD',
   DEBUG: 'DEBUG',
+  MCP_API_KEY: 'MCP_API_KEY',
 };
 
 // Interface for validated environment variables
@@ -27,6 +28,7 @@ export interface EnvConfig {
   n8nWebhookUsername?: string; // Made optional
   n8nWebhookPassword?: string; // Made optional
   debug: boolean;
+  mcpApiKey?: string; // Optional API key for MCP authentication
 }
 
 /**
@@ -37,14 +39,16 @@ export function loadEnvironmentVariables(): void {
     N8N_API_URL,
     N8N_API_KEY,
     N8N_WEBHOOK_USERNAME,
-    N8N_WEBHOOK_PASSWORD
+    N8N_WEBHOOK_PASSWORD,
+    MCP_API_KEY
   } = process.env;
 
   if (
     !N8N_API_URL &&
     !N8N_API_KEY &&
     !N8N_WEBHOOK_USERNAME &&
-    !N8N_WEBHOOK_PASSWORD
+    !N8N_WEBHOOK_PASSWORD &&
+    !MCP_API_KEY
   ) {
     const projectRoot = findConfig('package.json');
     if (projectRoot) {
@@ -65,6 +69,7 @@ export function getEnvConfig(): EnvConfig {
   const n8nApiKey = process.env[ENV_VARS.N8N_API_KEY];
   const n8nWebhookUsername = process.env[ENV_VARS.N8N_WEBHOOK_USERNAME];
   const n8nWebhookPassword = process.env[ENV_VARS.N8N_WEBHOOK_PASSWORD];
+  const mcpApiKey = process.env[ENV_VARS.MCP_API_KEY];
   const debug = process.env[ENV_VARS.DEBUG]?.toLowerCase() === 'true';
 
   // Validate required core environment variables
@@ -100,6 +105,7 @@ export function getEnvConfig(): EnvConfig {
     n8nApiKey,
     n8nWebhookUsername: n8nWebhookUsername || undefined, // Ensure undefined if empty
     n8nWebhookPassword: n8nWebhookPassword || undefined, // Ensure undefined if empty
+    mcpApiKey: mcpApiKey || undefined, // Ensure undefined if empty
     debug,
   };
 }

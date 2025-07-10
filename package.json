@@ -42,8 +42,12 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.7.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
     "axios": "^1.6.2",
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "express": "^5.1.0",
     "find-config": "^1.0.0"
   },
   "devDependencies": {
