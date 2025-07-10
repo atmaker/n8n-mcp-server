@@ -41,7 +41,7 @@
     "package.json"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.7.0",
+    "@modelcontextprotocol/sdk": "^1.15.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "axios": "^1.6.2",

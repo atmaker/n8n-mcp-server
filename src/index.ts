@@ -8,14 +8,16 @@
 
 import { loadEnvironmentVariables } from './config/environment.js';
 import { configureServer } from './config/server.js';
-import { createSseServer } from './transports/sse.js';
+import { createStreamableServer } from './transports/streamable.js';
 import { createStdioServer } from './transports/stdio.js';
+import { createSseServer } from './transports/sse.js';
 
 // Load environment variables
 loadEnvironmentVariables();
 
 // Get server mode from environment or default to stdio
 const SERVER_MODE = process.env.SERVER_MODE?.toLowerCase() || 'stdio';
+// 'sse' mode now uses the more modern Streamable HTTP transport, which is backward compatible
 const SERVER_PORT = parseInt(process.env.SERVER_PORT || '8000', 10);
 const CONTAINER_PORT = parseInt(process.env.CONTAINER_PORT || '3000', 10);
 
@@ -40,16 +42,15 @@ async function main() {
     });
 
     // Connect to the appropriate transport based on mode
-    if (SERVER_MODE === 'sse') {
-      // Start HTTP+SSE server
+    if (SERVER_MODE === 'streamable') {
+      // Start Streamable HTTP server (replaces legacy SSE server)
+      await createStreamableServer(server, SERVER_PORT);
+    } else if (SERVER_MODE === 'sse') {
+      // Start SSE server (legacy mode)
       await createSseServer(server, SERVER_PORT);
-      console.info(`n8n MCP Server started`);
-      // This is the host-accessible URL (the container port is mapped to CONTAINER_PORT on the host)
-      console.info(`n8n MCP Server accessible from host at http://localhost:${CONTAINER_PORT}/sse`);
     } else {
       // Default to stdio transport
       await createStdioServer(server);
-      console.info('n8n MCP Server running in stdio mode');
     }
   } catch (error) {
     console.error('Failed to start n8n MCP Server:', error);

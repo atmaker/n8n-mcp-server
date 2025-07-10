@@ -12,12 +12,15 @@ The n8n MCP Server is configured using environment variables, which can be set i
 |----------|-------------|---------|
 | `N8N_API_URL` | URL of the n8n API | `http://localhost:5678/api/v1` |
 | `N8N_API_KEY` | API key for authenticating with n8n | `n8n_api_...` |
+| `MCP_API_KEY` | API key for authenticating client requests to the server (when using HTTP-based transports) | `mcp_api_abc123...` |
 
 ### Optional Variables
 
 | Variable | Description | Default | Example |
 |----------|-------------|---------|---------|
 | `DEBUG` | Enable debug logging | `false` | `true` or `false` |
+| `SERVER_MODE` | Transport mode for the server | `stdio` | `stdio`, `sse`, or `streamable-http` |
+| `SERVER_PORT` | Port for HTTP-based transports | `3000` | Any valid port number |
 
 ## Creating a .env File
 
@@ -44,6 +47,15 @@ N8N_API_KEY=your_n8n_api_key_here
 
 # Optional: Set to 'true' to enable debug logging
 DEBUG=false
+
+# Transport mode: stdio (default), sse (legacy), or streamable-http (recommended for new integrations)
+SERVER_MODE=stdio
+
+# Port for HTTP-based transports (SSE or Streamable HTTP)
+SERVER_PORT=3000
+
+# API key for authenticating client requests to the server (for HTTP-based transports)
+MCP_API_KEY=your_secure_api_key_here
 ```
 
 ## Generating an n8n API Key
@@ -60,7 +72,53 @@ To use the n8n MCP Server, you need an API key from your n8n instance:
 
 ## Server Connection Options
 
-By default, the n8n MCP Server listens on `stdin` and `stdout` for Model Context Protocol communications. This is the format expected by AI assistants using the MCP protocol.
+The n8n MCP Server supports multiple transport modes, controlled by the `SERVER_MODE` environment variable:
+
+### stdio Transport (Default)
+
+The server listens on `stdin` and `stdout` for Model Context Protocol communications. This is the default mode and is expected by most AI assistants using the MCP protocol as a direct subprocess.
+
+```env
+SERVER_MODE=stdio
+```
+
+### SSE Transport (Legacy)
+
+Server-Sent Events (SSE) transport exposes HTTP endpoints for event streaming and message handling.
+
+```env
+SERVER_MODE=sse
+SERVER_PORT=3000
+MCP_API_KEY=your_secure_api_key_here  # Required for authentication
+```
+
+In SSE mode, the server exposes these endpoints:
+- `/sse` - Event stream endpoint (GET)
+- `/messages` - Client-to-server message endpoint (POST)
+- `/mcp` - Alternative endpoint supporting both events and messages for compatibility
+
+### Streamable HTTP Transport (Recommended)
+
+Modern HTTP-based transport with streaming support, implemented using the MCP TypeScript SDK.
+
+```env
+SERVER_MODE=streamable-http
+SERVER_PORT=3000
+MCP_API_KEY=your_secure_api_key_here  # Required for authentication
+```
+
+In Streamable HTTP mode, the server exposes:
+- `/mcp` - Unified endpoint for both events and messages
+
+### Authentication
+
+Both HTTP-based transports (SSE and Streamable HTTP) require API key authentication. Clients must include the API key in the Authorization header:
+
+```
+Authorization: Bearer your_secure_api_key_here
+```
+
+For security, use a randomly generated API key with sufficient entropy.
 
 ## Configuring AI Assistants
 
@@ -99,6 +157,64 @@ To verify your configuration:
 
 If configured correctly, the assistant should be able to retrieve and display your workflows.
 
+## Docker Configuration
+
+When running in Docker, special networking considerations apply:
+
+### n8n API Connectivity
+
+When the n8n MCP Server runs in a container, it cannot connect to n8n API using `localhost` or `127.0.0.1`. Use one of these approaches:
+
+1. **Host Network Mode**: Add `network_mode: host` in docker-compose.yml to access the host network directly.
+
+```yaml
+services:
+  n8n-mcp-server:
+    # ... other configuration
+    network_mode: host
+    environment:
+      N8N_API_URL: http://localhost:5678/api/v1
+```
+
+2. **Docker DNS**: Use `host.docker.internal` (works on Docker Desktop) or the host's gateway IP.
+
+```yaml
+services:
+  n8n-mcp-server:
+    # ... other configuration
+    environment:
+      N8N_API_URL: http://host.docker.internal:5678/api/v1
+```
+
+3. **Docker Network**: Put both services on the same Docker network.
+
+```yaml
+services:
+  n8n:
+    # ... n8n configuration
+  n8n-mcp-server:
+    # ... other configuration
+    environment:
+      N8N_API_URL: http://n8n:5678/api/v1
+```
+
+### Exposing HTTP-based Transports
+
+When using SSE or Streamable HTTP transports in Docker, make sure to:
+
+1. Map the container port to the host
+
+```yaml
+services:
+  n8n-mcp-server:
+    # ... other configuration
+    ports:
+      - "3000:3000"
+    environment:
+      SERVER_MODE: streamable-http
+      SERVER_PORT: 3000
+```
+
 ## Troubleshooting
 
 If you encounter issues with your configuration, check:
@@ -107,5 +223,7 @@ If you encounter issues with your configuration, check:
 - The n8n API URL is accessible from where the server is running
 - The API key has the correct permissions
 - Any firewalls or network restrictions that might block connections
+- When using HTTP-based transports, verify authentication headers are correct
+- In Docker, check network connectivity between containers and to host
 
 For more specific issues, see the [Troubleshooting](./troubleshooting.md) guide.

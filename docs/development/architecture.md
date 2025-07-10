@@ -24,7 +24,7 @@ The server entry point is defined in `src/index.ts`. This file:
 1. Initializes the configuration from environment variables
 2. Creates and configures the MCP server instance
 3. Registers tool and resource handlers
-4. Connects to the transport layer (typically stdio)
+4. Connects to the appropriate transport layer based on the `SERVER_MODE` setting (stdio, SSE, or Streamable HTTP)
 
 ### Configuration
 
@@ -45,6 +45,30 @@ The API client layer (`src/api/`) provides a clean interface for interacting wit
 - Authentication handling using the n8n API key
 
 The client uses Axios for HTTP requests and includes error handling specific to the n8n API responses.
+
+### Transport Layer (`src/transports/`):
+
+The transport layer handles communication between the MCP server and AI assistants. It includes components for multiple transport protocols:
+
+- **stdio Transport**: Default communication via standard input/output
+  - Receives requests via stdin
+  - Returns responses via stdout
+  - Used when running as a direct subprocess of an AI assistant
+
+- **SSE Transport** (`src/transports/sse.ts`): 
+  - Exposes HTTP endpoints (`/sse` and `/mcp`) for event streaming
+  - Handles client-to-server messages via POST to `/messages` and `/mcp`
+  - Secured with API key authentication
+  - Legacy/backward compatibility mode
+
+- **Streamable HTTP Transport** (`src/transports/streamable.ts`):
+  - Modern implementation using MCP SDK 
+  - Exposes HTTP endpoint at `/mcp`
+  - Supports streaming responses
+  - Secured with API key authentication
+  - Recommended for new integrations
+
+The transport used is determined by the `SERVER_MODE` environment variable. The layer abstracts the underlying communication mechanism, making it possible to change transport methods without affecting the rest of the system.
 
 ### MCP Tools
 

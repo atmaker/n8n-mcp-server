@@ -6,6 +6,7 @@ This section covers everything you need to know to set up and configure the n8n 
 
 - [Installation](./installation.md): Instructions for installing the n8n MCP Server from npm or from source.
 - [Configuration](./configuration.md): Information on configuring the server, including environment variables and n8n API setup.
+- [Client Usage](./client-usage.md): Guide for connecting client applications to the server using different transport modes.
 - [Troubleshooting](./troubleshooting.md): Solutions to common issues you might encounter.
 
 ## Quick Start

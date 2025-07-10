@@ -27,7 +27,7 @@ export async function createSseServer(server: Server, port: number = 8000): Prom
   app.use(cors({
     origin: '*', // Configure as needed for production
     exposedHeaders: ['Mcp-Session-Id'],
-    allowedHeaders: ['Content-Type', 'Mcp-Session-Id'],
+    allowedHeaders: ['Content-Type', 'Mcp-Session-Id', 'Authorization'],
   }));
   
   // Apply JSON parsing to all routes EXCEPT /messages which needs raw body
@@ -44,9 +44,9 @@ export async function createSseServer(server: Server, port: number = 8000): Prom
     res.status(200).send('OK');
   });
   
-  // SSE endpoint for server-to-client events
-  app.get('/sse', authenticateSseRequest, async (req, res) => {
-    console.log('SSE connection established');
+  // SSE endpoints for server-to-client events (support both /sse and /mcp for compatibility)
+  app.get(['/sse', '/mcp'], authenticateSseRequest, async (req, res) => {
+    console.log(`SSE connection established on ${req.path}`);
     
     // Create new SSE transport
     const sseEndpoint = '/messages';
@@ -102,12 +102,12 @@ export async function createSseServer(server: Server, port: number = 8000): Prom
   });
   
   // Start the server
-  app.listen(port);
-  
-  // Log connection information for clarity
-  console.info(`SSE server endpoints available at:`);
-  console.info(`  - SSE connect endpoint: http://localhost:${port}/sse`);
-  console.info(`  - POST message endpoint: http://localhost:${port}/messages?sessionId=<session-id>`);
+  app.listen(port, () => {
+    console.info(`n8n MCP Server running in SSE transport mode:`);
+    console.info(`  - Container internal HTTP port: ${port}`);
+    const containerPort = process.env.CONTAINER_PORT;
+    console.info(`  - n8n MCP Server available at: http://localhost:${containerPort || port}/sse and http://localhost:${containerPort || port}/mcp`);
+  });
   
   return app;
 }

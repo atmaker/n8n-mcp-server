@@ -7,6 +7,7 @@ Welcome to the n8n MCP Server documentation. This documentation provides compreh
 - [Setup and Configuration](./setup/index.md)
   - [Installation](./setup/installation.md)
   - [Configuration](./setup/configuration.md)
+  - [Client Usage](./setup/client-usage.md)
   - [Troubleshooting](./setup/troubleshooting.md)
 
 - [API Reference](./api/index.md)

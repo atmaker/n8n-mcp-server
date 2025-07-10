@@ -20,5 +20,7 @@ export async function createStdioServer(server: Server<any, any, any>): Promise<
   // Connect the transport to the MCP server
   await server.connect(transport);
   
+  console.info(`n8n MCP Server running in stdio transport mode.`);
+  
   return transport;
 }
