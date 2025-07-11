@@ -216,20 +216,26 @@ Lists executions for a specific workflow.
   "properties": {
     "workflowId": {
       "type": "string",
-      "description": "ID of the workflow to get executions for"
-    },
-    "limit": {
-      "type": "number",
-      "description": "Maximum number of executions to return",
-      "default": 20
+      "description": "Optional ID of workflow to filter executions by"
     },
     "status": {
       "type": "string",
-      "description": "Filter by execution status",
-      "enum": ["success", "error", "running", "waiting"]
+      "description": "Optional status to filter by (success, error, waiting, or canceled)"
+    },
+    "includeSummary": {
+      "type": "boolean",
+      "description": "Include summary statistics about executions"
+    },
+    "offset": {
+      "type": "number",
+      "description": "Number of items to skip (for pagination). Default is 0."
+    },
+    "limit": {
+      "type": "number",
+      "description": "Maximum number of executions to return. Default is 10."
     }
   },
-  "required": ["workflowId"]
+  "required": []
 }
 ```
 
@@ -251,6 +257,20 @@ const limitedExecutions = await useExecutionList({
 const successfulExecutions = await useExecutionList({
   workflowId: "1234abc",
   status: "success"
+});
+
+// Paginate results - second page of 5 items per page
+const paginatedExecutions = await useExecutionList({
+  limit: 5,
+  offset: 5
+});
+
+// Combine filtering and pagination
+const paginatedSuccessExecutions = await useExecutionList({
+  workflowId: "1234abc",
+  status: "success",
+  limit: 10,
+  offset: 20 // Show page 3 (items 21-30)
 });
 ```
 

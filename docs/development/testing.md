@@ -416,6 +416,80 @@ beforeEach(() => {
 });
 ```
 
+### Environment Variable Management and Test Isolation
+
+When writing tests that depend on environment variables (like `N8N_API_URL` and `N8N_API_KEY`), it's important to properly manage these variables to avoid test leakage between files:
+
+#### Direct Environment Management (Recommended)
+
+For tests that modify environment variables, the recommended approach is direct environment manipulation with proper restoration:
+
+```typescript
+// Store original environment at the top level of your describe block
+const originalEnv = { ...process.env };
+
+beforeEach(() => {
+  // Set required environment variables for tests
+  process.env = { 
+    ...originalEnv,
+    N8N_API_URL: 'https://test-instance.n8n.io/api/v1',
+    N8N_API_KEY: 'test-api-key'
+  };
+});
+
+afterEach(() => {
+  // Restore original environment after each test
+  process.env = originalEnv;
+});
+```
+
+This approach ensures:
+- Each test starts with a clean environment state
+- Changes made in one test don't affect others
+- The original environment is always restored after tests complete
+
+#### Handling Existing `.env` Files
+
+Some tests may assume no `.env` file exists. For tests that need this assumption:
+
+```typescript
+// Check if a real .env file exists
+const envPath = path.resolve(projectRoot, '.env');
+if (fs.existsSync(envPath)) {
+  // Skip the test or modify expectations
+  console.log(`Skipping test: A real .env file exists at ${envPath}`);
+  return;
+}
+```
+
+#### Testing Environment Loading
+
+When testing code that loads environment variables (like the `loadEnvironmentVariables` function):
+
+1. Use `jest.resetModules()` to clear Node's module cache between tests
+2. Compare environment state before and after loading rather than expecting specific values
+3. Consider conditionally skipping tests that depend on file system state
+
+#### Avoid Jest Module Mocking for ES Modules
+
+Due to quirks in how Jest handles ES modules with `.js` extensions in TypeScript projects, avoid:
+
+```typescript
+// Problematic with ES modules
+jest.mock('../../src/module.js');
+```
+
+Instead, prefer direct method overrides on instances:
+
+```typescript
+// Better approach
+const handler = new MyHandler();
+// Type cast if accessing protected members
+(handler as any).apiService = mockApiService;
+// Or override methods directly
+handler.executeMethod = jest.fn().mockResolvedValue(mockResult);
+```
+
 ## Best Practices
 
 ### General Testing Guidelines

@@ -62,7 +62,7 @@ export function formatExecutionDetails(execution: Execution): Record<string, any
           nodeResults[nodeName] = {
             status: lastOutput.status,
             items: outputData.length,
-            data: outputData.slice(0, 3), // Limit to first 3 items to avoid overwhelming response
+            data: outputData, // Was before '.slice(0, 3),' Limit to first 3 items to avoid overwhelming response
           };
         }
       } catch (error) {

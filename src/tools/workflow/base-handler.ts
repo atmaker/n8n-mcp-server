@@ -8,6 +8,7 @@ import { ToolCallResult } from '../../types/index.js';
 import { N8nApiError } from '../../errors/index.js';
 import { createApiService } from '../../api/n8n-client.js';
 import { getEnvConfig } from '../../config/environment.js';
+import { PaginationParams, paginateResults } from '../../utils/pagination.js';
 
 /**
  * Base class for workflow tool handlers
@@ -89,5 +90,42 @@ export abstract class BaseWorkflowToolHandler {
         
       return this.formatError(`Error executing workflow tool: ${errorMessage}`);
     }
+  }
+  
+  /**
+   * Extract pagination parameters from args
+   * 
+   * @param args Tool arguments
+   * @returns Standardized pagination parameters
+   */
+  protected getPaginationParams(args: Record<string, any>): PaginationParams {
+    return {
+      offset: args.offset !== undefined ? Number(args.offset) : 0,
+      limit: args.limit !== undefined ? Number(args.limit) : 10,
+    };
+  }
+  
+  /**
+   * Format a paginated success response
+   * 
+   * @param items Items to paginate
+   * @param params Pagination parameters
+   * @param message Optional success message
+   * @returns Formatted paginated success response
+   */
+  protected formatPaginatedSuccess<T>(
+    items: T[],
+    params: PaginationParams = {},
+    message?: string
+  ): ToolCallResult {
+    const paginated = paginateResults(items, params);
+    
+    // Format message with pagination info
+    const paginationInfo = `Showing ${paginated.data.length} of ${paginated.pagination.total} total items`;
+    const fullMessage = message 
+      ? `${message}\n${paginationInfo}`
+      : paginationInfo;
+    
+    return this.formatSuccess(paginated, fullMessage);
   }
 }

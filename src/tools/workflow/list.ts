@@ -19,19 +19,33 @@ export class ListWorkflowsHandler extends BaseWorkflowToolHandler {
    */
   async execute(args: Record<string, any>): Promise<ToolCallResult> {
     return this.handleExecution(async () => {
+      const { active } = args;
+      const paginationParams = this.getPaginationParams(args);
+      
+      // Get all workflows
       const workflows = await this.apiService.getWorkflows();
       
+      // Apply active filter if specified
+      let filteredWorkflows = workflows;
+      if (active !== undefined) {
+        filteredWorkflows = workflows.filter(
+          (workflow: Workflow) => workflow.active === active
+        );
+      }
+      
       // Format the workflows for display
-      const formattedWorkflows = workflows.map((workflow: Workflow) => ({
+      const formattedWorkflows = filteredWorkflows.map((workflow: Workflow) => ({
         id: workflow.id,
         name: workflow.name,
         active: workflow.active,
         updatedAt: workflow.updatedAt,
       }));
       
-      return this.formatSuccess(
-        formattedWorkflows,
-        `Found ${formattedWorkflows.length} workflow(s)`
+      // Use the base pagination handler
+      return this.formatPaginatedSuccess(
+        formattedWorkflows, 
+        paginationParams,
+        `Workflows${active !== undefined ? ` (${active ? 'active' : 'inactive'})` : ''}`
       );
     }, args);
   }
@@ -52,6 +66,14 @@ export function getListWorkflowsToolDefinition(): ToolDefinition {
         active: {
           type: 'boolean',
           description: 'Optional filter to show only active or inactive workflows',
+        },
+        offset: {
+          type: 'number',
+          description: 'Number of items to skip (for pagination). Default is 0.',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of items to return. Default is 10.',
         },
       },
       required: [],
