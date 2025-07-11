@@ -18,6 +18,7 @@ import { createApiService } from '../api/n8n-client.js';
 
 // Import types
 import { ToolCallResult } from '../types/index.js';
+import { ChunkedToolCallResult } from '../utils/response-formatter.js';
 
 /**
  * Configure and return an MCP server instance with all tools and resources
@@ -90,7 +91,7 @@ function setupToolCallRequestHandler(server: Server): void {
     const toolName = request.params.name;
     const args = request.params.arguments || {};
 
-    let result: ToolCallResult;
+    let result: ToolCallResult | ChunkedToolCallResult[];
 
     try {
       // Handle "prompts/list" as a special case, returning an empty success response
@@ -159,10 +160,21 @@ function setupToolCallRequestHandler(server: Server): void {
       }
 
       // Converting to MCP SDK expected format
-      return {
-        content: result.content,
-        isError: result.isError,
-      };
+      if (Array.isArray(result)) {
+        // Handle chunked results - use the first chunk for now
+        // In the future, this could be enhanced to handle chunked responses
+        // via streaming or pagination mechanisms in the MCP protocol
+        return {
+          content: result[0].content,
+          isError: result[0].isError,
+        };
+      } else {
+        // Standard single response
+        return {
+          content: result.content,
+          isError: result.isError,
+        };
+      }
     } catch (error) {
       console.error(`Error handling tool call to ${toolName}:`, error);
       return {

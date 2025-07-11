@@ -7,6 +7,7 @@
 import axios from 'axios';
 import { z } from 'zod';
 import { ToolCallResult } from '../../types/index.js';
+import { ChunkedToolCallResult } from '../../utils/response-formatter.js';
 import { BaseExecutionToolHandler } from './base-handler.js';
 import { N8nApiError } from '../../errors/index.js';
 import { getEnvConfig } from '../../config/environment.js';
@@ -55,7 +56,7 @@ export class RunWebhookHandler extends BaseExecutionToolHandler {
    * @param args Tool arguments
    * @returns Tool call result
    */
-  async execute(args: Record<string, any>): Promise<ToolCallResult> {
+  async execute(args: Record<string, any>): Promise<ToolCallResult | ChunkedToolCallResult[]> {
     return this.handleExecution(async (args) => {
       // Parse and validate arguments
       const params = runWebhookSchema.parse(args);

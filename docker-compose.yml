@@ -1,0 +1,38 @@
+services:
+  n8n-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: n8n-mcp-server
+    container_name: n8n-mcp-server
+    volumes:
+      - ./config:/app/config
+    environment:
+      - N8N_API_URL=${N8N_API_URL:-http://host.docker.internal:5678/api/v1}
+      - N8N_API_KEY=${N8N_API_KEY:-your_n8n_api_key_here}
+      - N8N_WEBHOOK_USERNAME=${N8N_WEBHOOK_USERNAME:-username}
+      - N8N_WEBHOOK_PASSWORD=${N8N_WEBHOOK_PASSWORD:-password}
+      - SERVER_MODE=${SERVER_MODE:-sse}
+      - SERVER_PORT=${SERVER_PORT:-8000}
+      - CONTAINER_PORT=${CONTAINER_PORT:-3000}
+      - MCP_API_KEY=${MCP_API_KEY:-}
+      - DEBUG=${DEBUG:-false}
+    ports:
+      - "${CONTAINER_PORT}:${SERVER_PORT}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: "no"
+    tty: true
+    stdin_open: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - dockernet
+
+networks:
+  dockernet:
+    name: ai-docker-compose_dockernet
+    external: true

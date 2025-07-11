@@ -6,6 +6,7 @@
 
 import { BaseExecutionToolHandler } from './base-handler.js';
 import { ToolCallResult, ToolDefinition } from '../../types/index.js';
+import { ChunkedToolCallResult } from '../../utils/response-formatter.js';
 import { McpError } from '@modelcontextprotocol/sdk/types.js';
 import { ErrorCode } from '../../errors/error-codes.js';
 
@@ -19,7 +20,7 @@ export class DeleteExecutionHandler extends BaseExecutionToolHandler {
    * @param args Tool arguments (executionId)
    * @returns Result of the deletion operation
    */
-  async execute(args: Record<string, any>): Promise<ToolCallResult> {
+  async execute(args: Record<string, any>): Promise<ToolCallResult | ChunkedToolCallResult[]> {
     return this.handleExecution(async () => {
       // Validate required parameters
       if (!args.executionId) {

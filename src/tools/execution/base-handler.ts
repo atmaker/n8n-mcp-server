@@ -8,6 +8,12 @@ import { ToolCallResult } from '../../types/index.js';
 import { N8nApiError } from '../../errors/index.js';
 import { createApiService } from '../../api/n8n-client.js';
 import { getEnvConfig } from '../../config/environment.js';
+import {
+  ChunkedToolCallResult,
+  createSuccessResponse,
+  createErrorResponse,
+  FormattingOptions
+} from '../../utils/response-formatter.js';
 
 /**
  * Base class for execution tool handlers
@@ -19,30 +25,20 @@ export abstract class BaseExecutionToolHandler {
    * Validate and execute the tool
    * 
    * @param args Arguments passed to the tool
-   * @returns Tool call result
+   * @returns Tool call result or array of results if chunked
    */
-  abstract execute(args: Record<string, any>): Promise<ToolCallResult>;
+  abstract execute(args: Record<string, any>): Promise<ToolCallResult | ChunkedToolCallResult[]>;
   
   /**
-   * Format a successful response
+   * Format a successful response with support for chunking and truncation
    * 
    * @param data Response data
    * @param message Optional success message
-   * @returns Formatted success response
+   * @param options Optional formatting options
+   * @returns Formatted success response(s)
    */
-  protected formatSuccess(data: any, message?: string): ToolCallResult {
-    const formattedData = typeof data === 'object' 
-      ? JSON.stringify(data, null, 2)
-      : String(data);
-      
-    return {
-      content: [
-        {
-          type: 'text',
-          text: message ? `${message}\n\n${formattedData}` : formattedData,
-        },
-      ],
-    };
+  protected formatSuccess(data: any, message?: string, options?: FormattingOptions): ChunkedToolCallResult[] {
+    return createSuccessResponse(data, message, options);
   }
   
   /**
@@ -51,18 +47,8 @@ export abstract class BaseExecutionToolHandler {
    * @param error Error object or message
    * @returns Formatted error response
    */
-  protected formatError(error: Error | string): ToolCallResult {
-    const errorMessage = error instanceof Error ? error.message : error;
-    
-    return {
-      content: [
-        {
-          type: 'text',
-          text: errorMessage,
-        },
-      ],
-      isError: true,
-    };
+  protected formatError(error: Error | string): ChunkedToolCallResult {
+    return createErrorResponse(error);
   }
   
   /**
@@ -70,12 +56,12 @@ export abstract class BaseExecutionToolHandler {
    * 
    * @param handler Function to execute
    * @param args Arguments to pass to the handler
-   * @returns Tool call result
+   * @returns Tool call result or array of results if chunked
    */
   protected async handleExecution(
-    handler: (args: Record<string, any>) => Promise<ToolCallResult>,
+    handler: (args: Record<string, any>) => Promise<ToolCallResult | ChunkedToolCallResult[]>,
     args: Record<string, any>
-  ): Promise<ToolCallResult> {
+  ): Promise<ToolCallResult | ChunkedToolCallResult[]> {
     try {
       return await handler(args);
     } catch (error) {

@@ -6,6 +6,7 @@
 
 import { BaseExecutionToolHandler } from './base-handler.js';
 import { ToolCallResult, ToolDefinition } from '../../types/index.js';
+import { ChunkedToolCallResult } from '../../utils/response-formatter.js';
 import { McpError } from '@modelcontextprotocol/sdk/types.js';
 import { ErrorCode } from '../../errors/error-codes.js';
 import { formatExecutionDetails } from '../../utils/execution-formatter.js';
@@ -20,7 +21,7 @@ export class GetExecutionHandler extends BaseExecutionToolHandler {
    * @param args Tool arguments (executionId)
    * @returns Execution details
    */
-  async execute(args: Record<string, any>): Promise<ToolCallResult> {
+  async execute(args: Record<string, any>): Promise<ToolCallResult | ChunkedToolCallResult[]> {
     return this.handleExecution(async () => {
       // Validate required parameters
       if (!args.executionId) {

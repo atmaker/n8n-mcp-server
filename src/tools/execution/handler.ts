@@ -5,6 +5,7 @@
  */
 
 import { ToolCallResult } from '../../types/index.js';
+import { ChunkedToolCallResult } from '../../utils/response-formatter.js';
 import { McpError } from '@modelcontextprotocol/sdk/types.js';
 import { ErrorCode } from '../../errors/error-codes.js';
 import { getErrorMessage } from '../../errors/index.js';
@@ -25,7 +26,7 @@ import {
 export default async function executionHandler(
   toolName: string,
   args: Record<string, any>
-): Promise<ToolCallResult> {
+): Promise<ToolCallResult | ChunkedToolCallResult[]> {
   try {
     // Route to the appropriate handler based on tool name
     switch (toolName) {

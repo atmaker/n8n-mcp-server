@@ -6,6 +6,7 @@
 
 import { BaseExecutionToolHandler } from './base-handler.js';
 import { ToolCallResult, ToolDefinition, Execution } from '../../types/index.js';
+import { ChunkedToolCallResult } from '../../utils/response-formatter.js';
 import { formatExecutionSummary, summarizeExecutions } from '../../utils/execution-formatter.js';
 
 /**
@@ -18,7 +19,7 @@ export class ListExecutionsHandler extends BaseExecutionToolHandler {
    * @param args Tool arguments (workflowId, status, limit, lastId)
    * @returns List of executions
    */
-  async execute(args: Record<string, any>): Promise<ToolCallResult> {
+  async execute(args: Record<string, any>): Promise<ToolCallResult | ChunkedToolCallResult[]> {
     return this.handleExecution(async () => {
       const executions = await this.apiService.getExecutions();
       
