@@ -26,6 +26,7 @@ yarn-error.log*
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+.windsurf/
 
 # macOS
 .DS_Store
@@ -34,6 +35,7 @@ yarn-error.log*
 .npm
 .eslintcache
 .yarn-integrity
+docker-compose.yml
 
 # CRCT System
 cline_docs/
