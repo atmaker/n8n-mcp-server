@@ -53,3 +53,36 @@ export interface Execution {
   };
   [key: string]: any;
 }
+
+// Types for n8n nodes and community packages
+
+// Minimal representation of an installed node as returned by /nodes
+export interface InstalledNode {
+  type: string; // e.g., n8n-nodes-base.httpRequest
+  displayName?: string;
+  version?: string | number;
+  categories?: string[];
+  icon?: string;
+  [key: string]: any;
+}
+
+// Minimal representation of an installed package entry
+export interface InstalledPackage {
+  packageName: string;
+  installedVersion: string;
+  updateAvailable?: boolean;
+  [key: string]: any;
+}
+
+// Node detail response from /nodes/{nodeType}
+export interface NodeDetail {
+  node: InstalledNode;
+  installedPackages: InstalledPackage[];
+}
+
+// Community package entry in /community-packages
+export interface CommunityPackage {
+  packageName: string;
+  installedVersion: string;
+  updateAvailable: boolean;
+}

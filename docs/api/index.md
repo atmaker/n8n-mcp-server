@@ -26,6 +26,8 @@ The server provides tools for managing workflows and executions:
 
 - [Workflow Tools](./workflow-tools.md): Create, list, update, and delete workflows
 - [Execution Tools](./execution-tools.md): Execute workflows and manage workflow executions
+- [Nodes Tools](./nodes-tools.md): List installed nodes, get node details, list node categories
+- [Community Packages Tools](./community-packages-tools.md): List, install, update, and uninstall community packages
 
 ## Available Resources
 

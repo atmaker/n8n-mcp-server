@@ -135,31 +135,38 @@ describe('loadEnvironmentVariables', () => {
 
   // Test Case 3: No environment variables set, no .env file exists
   test('should not change process.env if no required env vars are set and no .env file exists', () => {
-    if (!projectRootDir) {
-      console.warn("Skipping parts of test: Project root not found, .env file check might be unreliable.");
-      // We can still proceed as findConfig would return null or the .env file wouldn't be found
-    } else {
-      const actualEnvPath = path.resolve(projectRootDir, '.env');
+    let actualEnvRenamedPath: string | null = null;
+    let actualEnvPath: string | null = null;
+
+    if (projectRootDir) {
+      actualEnvPath = path.resolve(projectRootDir, '.env');
       if (fs.existsSync(actualEnvPath)) {
-        // This test requires no .env file, so if one exists (e.g. a real one for dev), this test is harder.
-        // For CI/isolated env, it should be fine. Here we assume it's okay if it doesn't exist.
-        // If it *does* exist, the test might reflect that it *was* loaded if not handled.
-        console.warn(`Warning: Test 'no .env file exists' running when an actual .env file is present at ${actualEnvPath}. This test assumes it won't be loaded or is empty.`);
-        // To be robust, we'd need to ensure it's not there, similar to Test Case 2's cleanup.
-        // For now, we assume `loadEnvironmentVariables` won't find one if `findConfig` fails or the file is empty/irrelevant.
+        // Temporarily move aside the real .env for the duration of this test
+        actualEnvRenamedPath = actualEnvPath + '.backup_case3';
+        fs.renameSync(actualEnvPath, actualEnvRenamedPath);
       }
     }
-    
-    // Vars are cleared in beforeEach
-    const envStateBeforeLoad = saveEnvState();
-    loadEnvironmentVariables(); // Should not find a .env file to load (or findConfig returns null)
-    
-    expect(process.env[ENV_VARS.N8N_API_URL]).toBeUndefined();
-    expect(process.env[ENV_VARS.N8N_API_KEY]).toBeUndefined();
-    expect(process.env[ENV_VARS.N8N_WEBHOOK_USERNAME]).toBeUndefined();
-    expect(process.env[ENV_VARS.N8N_WEBHOOK_PASSWORD]).toBeUndefined();
-    // Check if other env vars were not disturbed (more robust check)
-    expect(process.env).toEqual(envStateBeforeLoad);
+
+    try {
+      // Vars are cleared in beforeEach
+      const envStateBeforeLoad = saveEnvState();
+      loadEnvironmentVariables(); // Should not find a .env file to load (or findConfig returns null)
+      
+      expect(process.env[ENV_VARS.N8N_API_URL]).toBeUndefined();
+      expect(process.env[ENV_VARS.N8N_API_KEY]).toBeUndefined();
+      expect(process.env[ENV_VARS.N8N_WEBHOOK_USERNAME]).toBeUndefined();
+      expect(process.env[ENV_VARS.N8N_WEBHOOK_PASSWORD]).toBeUndefined();
+      // Check if other env vars were not disturbed (more robust check)
+      expect(process.env).toEqual(envStateBeforeLoad);
+    } finally {
+      // Restore any real .env if we moved it
+      if (actualEnvPath && fs.existsSync(actualEnvPath)) {
+        try { fs.unlinkSync(actualEnvPath); } catch {}
+      }
+      if (actualEnvRenamedPath && fs.existsSync(actualEnvRenamedPath) && actualEnvPath) {
+        try { fs.renameSync(actualEnvRenamedPath, actualEnvPath); } catch {}
+      }
+    }
   });
 
   // Test Case 4: Some environment variables set

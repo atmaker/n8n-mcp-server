@@ -3,6 +3,7 @@
  */
 
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
+import { jest } from '@jest/globals';
 
 export interface MockResponse {
   data: any;
@@ -29,10 +30,11 @@ export const createMockAxiosInstance = () => {
   const mockRequests: Record<string, any[]> = {};
   const mockResponses: Record<string, MockResponse[]> = {};
   
-  const mockInstance = {
+  const mockInstance: any = {
     get: jest.fn(),
     post: jest.fn(),
     put: jest.fn(),
+    patch: jest.fn(),
     delete: jest.fn(),
     interceptors: {
       request: {
@@ -80,7 +82,7 @@ export const createMockAxiosInstance = () => {
   };
   
   // Setup method implementations
-  ['get', 'post', 'put', 'delete'].forEach(method => {
+  ['get', 'post', 'put', 'patch', 'delete'].forEach(method => {
     mockInstance[method].mockImplementation(async (url: string, data?: any) => {
       const requestKey = `${method}:${url}`;
       

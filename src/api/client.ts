@@ -20,9 +20,9 @@ export class N8nApiClient {
    * 
    * @param config Environment configuration
    */
-  constructor(config: EnvConfig) {
+  constructor(config: EnvConfig, axiosInstance?: AxiosInstance) {
     this.config = config;
-    this.axiosInstance = axios.create({
+    this.axiosInstance = axiosInstance ?? axios.create({
       baseURL: config.n8nApiUrl,
       headers: {
         'X-N8N-API-KEY': config.n8nApiKey,
@@ -96,6 +96,32 @@ export class N8nApiClient {
   }
 
   /**
+   * Get a page of workflows from n8n with cursor-based pagination
+   *
+   * @param params Optional query parameters (limit, cursor, active, name, tags, projectId, excludePinnedData)
+   * @returns Object containing page data and nextCursor
+   */
+  async getWorkflowsPage(params: {
+    limit?: number;
+    cursor?: string;
+    active?: boolean;
+    name?: string;
+    tags?: string;
+    projectId?: string;
+    excludePinnedData?: boolean;
+  } = {}): Promise<{ data: any[]; nextCursor: string | null }> {
+    try {
+      const response = await this.axiosInstance.get('/workflows', { params });
+      return {
+        data: response.data?.data || [],
+        nextCursor: response.data?.nextCursor ?? null,
+      };
+    } catch (error) {
+      throw handleAxiosError(error, 'Failed to fetch workflows');
+    }
+  }
+
+  /**
    * Get a specific workflow by ID
    * 
    * @param id Workflow ID
@@ -119,6 +145,31 @@ export class N8nApiClient {
     try {
       const response = await this.axiosInstance.get('/executions');
       return response.data.data || [];
+    } catch (error) {
+      throw handleAxiosError(error, 'Failed to fetch executions');
+    }
+  }
+
+  /**
+   * Get a page of executions from n8n with cursor-based pagination
+   *
+   * @param params Optional query parameters (limit, cursor, workflowId, status, projectId, includeData)
+   * @returns Object containing page data and nextCursor
+   */
+  async getExecutionsPage(params: {
+    limit?: number;
+    cursor?: string;
+    workflowId?: string;
+    status?: 'error' | 'success' | 'waiting' | 'canceled';
+    projectId?: string;
+    includeData?: boolean;
+  } = {}): Promise<{ data: any[]; nextCursor: string | null }> {
+    try {
+      const response = await this.axiosInstance.get('/executions', { params });
+      return {
+        data: response.data?.data || [],
+        nextCursor: response.data?.nextCursor ?? null,
+      };
     } catch (error) {
       throw handleAxiosError(error, 'Failed to fetch executions');
     }
@@ -281,6 +332,107 @@ export class N8nApiClient {
       return response.data;
     } catch (error) {
       throw handleAxiosError(error, `Failed to delete execution ${id}`);
+    }
+  }
+
+  /**
+   * Get a page of installed nodes
+   */
+  async getNodesPage(params: {
+    nodeType?: string;
+    limit?: number;
+    cursor?: string;
+    sort?: string;
+    order?: 'asc' | 'desc';
+  } = {}): Promise<{ data: any[]; nextCursor: string | null }> {
+    try {
+      const response = await this.axiosInstance.get('/nodes', { params });
+      return {
+        data: response.data?.data || [],
+        nextCursor: response.data?.nextCursor ?? null,
+      };
+    } catch (error) {
+      throw handleAxiosError(error, 'Failed to fetch nodes');
+    }
+  }
+
+  /**
+   * Get details for a single installed node
+   */
+  async getNode(nodeType: string): Promise<any> {
+    try {
+      const response = await this.axiosInstance.get(`/nodes/${encodeURIComponent(nodeType)}`);
+      return response.data;
+    } catch (error) {
+      throw handleAxiosError(error, `Failed to fetch node ${nodeType}`);
+    }
+  }
+
+  /**
+   * Get a page of node categories
+   */
+  async getNodeCategoriesPage(params: {
+    limit?: number;
+    cursor?: string;
+    sort?: 'name';
+    order?: 'asc' | 'desc';
+  } = {}): Promise<{ data: string[]; nextCursor: string | null }> {
+    try {
+      const response = await this.axiosInstance.get('/nodes/categories', { params });
+      return {
+        data: response.data?.data || [],
+        nextCursor: response.data?.nextCursor ?? null,
+      };
+    } catch (error) {
+      throw handleAxiosError(error, 'Failed to fetch node categories');
+    }
+  }
+
+  /**
+   * List installed community packages
+   */
+  async listCommunityPackages(): Promise<any[]> {
+    try {
+      const response = await this.axiosInstance.get('/community-packages');
+      return response.data?.data || [];
+    } catch (error) {
+      throw handleAxiosError(error, 'Failed to list community packages');
+    }
+  }
+
+  /**
+   * Install a community package
+   */
+  async installCommunityPackage(body: { name: string; version?: string; checksum?: string }): Promise<{ message: string }> {
+    try {
+      const response = await this.axiosInstance.post('/community-packages', body);
+      return response.data;
+    } catch (error) {
+      throw handleAxiosError(error, `Failed to install community package ${body?.name}`);
+    }
+  }
+
+  /**
+   * Update a community package
+   */
+  async updateCommunityPackage(body: { name: string; version?: string; checksum?: string }): Promise<{ message: string }> {
+    try {
+      const response = await this.axiosInstance.patch('/community-packages', body);
+      return response.data;
+    } catch (error) {
+      throw handleAxiosError(error, `Failed to update community package ${body?.name}`);
+    }
+  }
+
+  /**
+   * Uninstall a community package
+   */
+  async uninstallCommunityPackage(name: string): Promise<{ message: string }> {
+    try {
+      const response = await this.axiosInstance.delete('/community-packages', { params: { name } });
+      return response.data;
+    } catch (error) {
+      throw handleAxiosError(error, `Failed to uninstall community package ${name}`);
     }
   }
 }

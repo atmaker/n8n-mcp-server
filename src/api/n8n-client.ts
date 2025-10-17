@@ -6,7 +6,7 @@
 
 import { N8nApiClient } from './client.js';
 import { EnvConfig } from '../config/environment.js';
-import { Workflow, Execution } from '../types/index.js';
+import { Workflow, Execution, InstalledNode, NodeDetail, CommunityPackage } from '../types/index.js';
 
 /**
  * n8n API service - provides functions for interacting with n8n API
@@ -37,6 +37,24 @@ export class N8nApiService {
    */
   async getWorkflows(): Promise<Workflow[]> {
     return this.client.getWorkflows();
+  }
+
+  /**
+   * Get a page of workflows using cursor-based pagination
+   *
+   * @param params Optional query parameters (limit, cursor, active, name, tags, projectId, excludePinnedData)
+   * @returns Page data and nextCursor
+   */
+  async getWorkflowsPage(params: {
+    limit?: number;
+    cursor?: string;
+    active?: boolean;
+    name?: string;
+    tags?: string;
+    projectId?: string;
+    excludePinnedData?: boolean;
+  } = {}): Promise<{ data: Workflow[]; nextCursor: string | null }> {
+    return this.client.getWorkflowsPage(params);
   }
 
   /**
@@ -121,6 +139,23 @@ export class N8nApiService {
   }
 
   /**
+   * Get a page of executions using cursor-based pagination
+   *
+   * @param params Optional query parameters (limit, cursor, workflowId, status, projectId, includeData)
+   * @returns Page data and nextCursor
+   */
+  async getExecutionsPage(params: {
+    limit?: number;
+    cursor?: string;
+    workflowId?: string;
+    status?: 'error' | 'success' | 'waiting' | 'canceled';
+    projectId?: string;
+    includeData?: boolean;
+  } = {}): Promise<{ data: Execution[]; nextCursor: string | null }> {
+    return this.client.getExecutionsPage(params);
+  }
+
+  /**
    * Get a specific execution by ID
    * 
    * @param id Execution ID
@@ -138,6 +173,70 @@ export class N8nApiService {
    */
   async deleteExecution(id: string): Promise<any> {
     return this.client.deleteExecution(id);
+  }
+
+  // ===================== Nodes =====================
+
+  /**
+   * Get a page of installed nodes.
+   */
+  async getNodesPage(params: {
+    nodeType?: string;
+    limit?: number;
+    cursor?: string;
+    sort?: string;
+    order?: 'asc' | 'desc';
+  } = {}): Promise<{ data: InstalledNode[]; nextCursor: string | null }> {
+    return this.client.getNodesPage(params);
+  }
+
+  /**
+   * Get details of a specific installed node.
+   */
+  async getNode(nodeType: string): Promise<NodeDetail> {
+    return this.client.getNode(nodeType);
+  }
+
+  /**
+   * Get a page of node categories.
+   */
+  async getNodeCategoriesPage(params: {
+    limit?: number;
+    cursor?: string;
+    sort?: 'name';
+    order?: 'asc' | 'desc';
+  } = {}): Promise<{ data: string[]; nextCursor: string | null }> {
+    return this.client.getNodeCategoriesPage(params);
+  }
+
+  // ============ Community Packages ============
+
+  /**
+   * List installed community packages.
+   */
+  async listCommunityPackages(): Promise<CommunityPackage[]> {
+    return this.client.listCommunityPackages();
+  }
+
+  /**
+   * Install a community package.
+   */
+  async installCommunityPackage(body: { name: string; version?: string; checksum?: string }): Promise<{ message: string }> {
+    return this.client.installCommunityPackage(body);
+  }
+
+  /**
+   * Update a community package.
+   */
+  async updateCommunityPackage(body: { name: string; version?: string; checksum?: string }): Promise<{ message: string }> {
+    return this.client.updateCommunityPackage(body);
+  }
+
+  /**
+   * Uninstall a community package.
+   */
+  async uninstallCommunityPackage(name: string): Promise<{ message: string }> {
+    return this.client.uninstallCommunityPackage(name);
   }
 }
 

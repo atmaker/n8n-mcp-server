@@ -6,14 +6,17 @@
 
 import { ToolCallResult } from '../../types/index.js';
 import { N8nApiError } from '../../errors/index.js';
-import { createApiService } from '../../api/n8n-client.js';
+import { createApiService, N8nApiService } from '../../api/n8n-client.js';
 import { getEnvConfig } from '../../config/environment.js';
 
 /**
  * Base class for execution tool handlers
  */
 export abstract class BaseExecutionToolHandler {
-  protected apiService = createApiService(getEnvConfig());
+  protected apiService: N8nApiService;
+  constructor(apiService?: N8nApiService) {
+    this.apiService = apiService ?? createApiService(getEnvConfig());
+  }
   
   /**
    * Validate and execute the tool
@@ -80,7 +83,61 @@ export abstract class BaseExecutionToolHandler {
       return await handler(args);
     } catch (error) {
       if (error instanceof N8nApiError) {
-        return this.formatError(error.message);
+        const tips: string[] = [];
+        let headline = 'n8n API request failed';
+
+        const sc = error.statusCode;
+        if (typeof sc === 'number') {
+          if (sc === 401 || sc === 403) {
+            headline = 'Authentication failed for n8n API';
+            tips.push(
+              '- Ensure a valid n8n API key is configured (env: N8N_API_KEY).',
+              '- Use header X-N8N-API-KEY (the client already does this).',
+              '- Verify the key belongs to this n8n instance and has required permissions.'
+            );
+          } else if (sc === 404) {
+            headline = 'Requested resource was not found on n8n API';
+          } else if (sc >= 400 && sc < 500) {
+            headline = 'Invalid request to n8n API';
+            tips.push(
+              '- Check input parameters and their types.',
+              '- Ensure the endpoint and query parameters match your n8n version.'
+            );
+          } else if (sc >= 500) {
+            headline = 'n8n API returned a server error';
+            tips.push(
+              '- Try again shortly.',
+              '- Check n8n server logs for details.'
+            );
+          }
+        } else {
+          headline = 'Network error connecting to n8n API';
+          tips.push(
+            '- Verify N8N_API_URL is reachable from this MCP server runtime.',
+            '- If running in Docker, ensure the hostname is resolvable from the container (e.g., service name like "n8n" or host.docker.internal).',
+            '- Confirm the port is open and not blocked by a firewall.'
+          );
+        }
+
+        const detailsStr = error.details ? (() => {
+          try { return typeof error.details === 'string' ? error.details : JSON.stringify(error.details, null, 2); } catch { return undefined; }
+        })() : undefined;
+
+        const messageLines = [
+          headline,
+          '',
+          error.message,
+          tips.length ? '' : undefined,
+          tips.length ? 'Tips:' : undefined,
+          ...tips,
+          detailsStr ? '' : undefined,
+          detailsStr ? `Details: ${detailsStr}` : undefined,
+        ].filter((v): v is string => Boolean(v));
+
+        return {
+          content: [{ type: 'text', text: messageLines.join('\n') }],
+          isError: true,
+        };
       }
       
       const errorMessage = error instanceof Error 

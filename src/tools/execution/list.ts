@@ -20,48 +20,34 @@ export class ListExecutionsHandler extends BaseExecutionToolHandler {
    */
   async execute(args: Record<string, any>): Promise<ToolCallResult> {
     return this.handleExecution(async () => {
-      const executions = await this.apiService.getExecutions();
-      
-      // Apply filters if provided
-      let filteredExecutions = executions;
-      
-      // Filter by workflow ID if provided
-      if (args.workflowId) {
-        filteredExecutions = filteredExecutions.filter(
-          (execution: Execution) => execution.workflowId === args.workflowId
-        );
-      }
-      
-      // Filter by status if provided
-      if (args.status) {
-        filteredExecutions = filteredExecutions.filter(
-          (execution: Execution) => execution.status === args.status
-        );
-      }
-      
-      // Apply limit if provided
-      const limit = args.limit && args.limit > 0 ? args.limit : filteredExecutions.length;
-      filteredExecutions = filteredExecutions.slice(0, limit);
-      
+      const limit = typeof args.limit === 'number' && args.limit > 0 ? args.limit : undefined;
+      const cursor: string | undefined = args.cursor ?? args.lastId; // lastId kept as deprecated alias
+
+      const { data, nextCursor } = await this.apiService.getExecutionsPage({
+        limit,
+        cursor,
+        workflowId: args.workflowId,
+        status: args.status,
+      });
+
       // Format the executions for display
-      const formattedExecutions = filteredExecutions.map((execution: Execution) => 
+      const formattedExecutions = data.map((execution: Execution) =>
         formatExecutionSummary(execution)
       );
-      
-      // Generate summary if requested
-      let summary = undefined;
-      if (args.includeSummary) {
-        summary = summarizeExecutions(executions);
-      }
-      
+
+      // Generate summary if requested (summary for the current page)
+      const summary = args.includeSummary ? summarizeExecutions(data) : undefined;
+
       // Prepare response data
       const responseData = {
         executions: formattedExecutions,
-        summary: summary,
-        total: formattedExecutions.length,
-        filtered: args.workflowId || args.status ? true : false
+        summary,
+        count: formattedExecutions.length,
+        nextCursor,
+        hasMore: Boolean(nextCursor),
+        filtered: Boolean(args.workflowId || args.status),
       };
-      
+
       return this.formatSuccess(
         responseData,
         `Found ${formattedExecutions.length} execution(s)`
@@ -90,13 +76,17 @@ export function getListExecutionsToolDefinition(): ToolDefinition {
           type: 'string',
           description: 'Optional status to filter by (success, error, waiting, or canceled)',
         },
+        cursor: {
+          type: 'string',
+          description: 'Cursor for pagination. Use the nextCursor returned by the previous call.',
+        },
         limit: {
           type: 'number',
-          description: 'Maximum number of executions to return',
+          description: 'Maximum number of executions to return for this page',
         },
         lastId: {
           type: 'string',
-          description: 'ID of the last execution for pagination',
+          description: 'Deprecated: use cursor instead. ID of the last execution for pagination.',
         },
         includeSummary: {
           type: 'boolean',

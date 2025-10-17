@@ -1,5 +1,63 @@
 # Static Resources
 
+### n8n://nodes
+
+Provides a list of installed nodes in the n8n instance. Supports cursor-based pagination internally; the resource returns the first page by default.
+
+**URI:** `n8n://nodes`
+
+**Description:** Returns installed nodes with basic information.
+
+**Example Usage:**
+
+```javascript
+const resource = await accessMcpResource('n8n-mcp-server', 'n8n://nodes');
+```
+
+**Response:**
+
+```json
+{
+  "resourceType": "nodes",
+  "count": 2,
+  "nodes": [
+    { "type": "n8n-nodes-base.httpRequest", "displayName": "HTTP Request", "version": 1 },
+    { "type": "n8n-nodes-base.set", "displayName": "Set", "version": 1 }
+  ],
+  "nextCursor": null,
+  "_links": { "self": "n8n://nodes" },
+  "lastUpdated": "2025-03-01T12:00:00.000Z"
+}
+```
+
+### n8n://community-packages
+
+Provides a list of installed community packages in the n8n instance.
+
+**URI:** `n8n://community-packages`
+
+**Description:** Returns installed community packages with update availability.
+
+**Example Usage:**
+
+```javascript
+const resource = await accessMcpResource('n8n-mcp-server', 'n8n://community-packages');
+```
+
+**Response:**
+
+```json
+{
+  "resourceType": "community-packages",
+  "count": 1,
+  "packages": [
+    { "packageName": "n8n-nodes-foo", "installedVersion": "1.0.0", "updateAvailable": false }
+  ],
+  "_links": { "self": "n8n://community-packages" },
+  "lastUpdated": "2025-03-01T12:00:00.000Z"
+}
+```
+
 This page documents the static resources available in the n8n MCP Server.
 
 ## Overview

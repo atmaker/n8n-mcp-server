@@ -134,11 +134,11 @@ export function formatExecutionStats(executions: Execution[]): Record<string, an
  * @returns Formatted resource URI
  */
 export function formatResourceUri(
-  resourceType: 'workflow' | 'execution' | 'workflows' | 'execution-stats',
+  resourceType: 'workflow' | 'execution' | 'workflows' | 'execution-stats' | 'node' | 'nodes' | 'community-packages',
   id?: string,
 ): string {
   if (id) {
-    const base = ['workflow', 'execution'].includes(resourceType)
+    const base = ['workflow', 'execution', 'node'].includes(resourceType as any)
       ? `${resourceType}s`
       : resourceType;
     return `n8n://${base}/${id}`;

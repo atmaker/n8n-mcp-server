@@ -13,6 +13,8 @@ import {
 import { getEnvConfig } from './environment.js';
 import { setupWorkflowTools } from '../tools/workflow/index.js';
 import { setupExecutionTools } from '../tools/execution/index.js';
+import { setupNodesTools } from '../tools/nodes/index.js';
+import { setupCommunityPackageTools } from '../tools/community/index.js';
 import { setupResourceHandlers } from '../resources/index.js';
 import { createApiService } from '../api/n8n-client.js';
 
@@ -37,8 +39,9 @@ export async function configureServer(): Promise<Server> {
     await apiService.checkConnectivity();
     console.error(`Successfully connected to n8n API at ${envConfig.n8nApiUrl}`);
   } catch (error) {
-    console.error('ERROR: Failed to connect to n8n API:', error instanceof Error ? error.message : error);
-    throw error;
+    console.error('[WARN] Failed to connect to n8n API during startup.');
+    console.error('[WARN] The MCP server will continue to start, but tools that contact n8n may fail until connectivity is restored.');
+    console.error('[WARN] Details:', error instanceof Error ? error.message : String(error));
   }
 
   // Create server instance
@@ -73,9 +76,11 @@ function setupToolListRequestHandler(server: Server): void {
     // Combine tools from workflow and execution modules
     const workflowTools = await setupWorkflowTools();
     const executionTools = await setupExecutionTools();
+    const nodeTools = await setupNodesTools();
+    const communityTools = await setupCommunityPackageTools();
 
     return {
-      tools: [...workflowTools, ...executionTools],
+      tools: [...workflowTools, ...executionTools, ...nodeTools, ...communityTools],
     };
   });
 }
@@ -120,6 +125,19 @@ function setupToolCallRequestHandler(server: Server): void {
         RunWebhookHandler
       } = await import('../tools/execution/index.js');
       
+      const {
+        ListNodesHandler,
+        GetNodeHandler,
+        ListNodeCategoriesHandler,
+      } = await import('../tools/nodes/index.js');
+
+      const {
+        ListCommunityPackagesHandler,
+        InstallCommunityPackageHandler,
+        UpdateCommunityPackageHandler,
+        UninstallCommunityPackageHandler,
+      } = await import('../tools/community/index.js');
+      
       // Route the tool call to the appropriate handler
       if (toolName === 'list_workflows') {
         const handler = new ListWorkflowsHandler();
@@ -153,6 +171,27 @@ function setupToolCallRequestHandler(server: Server): void {
         result = await handler.execute(args);
       } else if (toolName === 'run_webhook') {
         const handler = new RunWebhookHandler();
+        result = await handler.execute(args);
+      } else if (toolName === 'list_nodes') {
+        const handler = new ListNodesHandler();
+        result = await handler.execute(args);
+      } else if (toolName === 'get_node') {
+        const handler = new GetNodeHandler();
+        result = await handler.execute(args);
+      } else if (toolName === 'list_node_categories') {
+        const handler = new ListNodeCategoriesHandler();
+        result = await handler.execute(args);
+      } else if (toolName === 'list_community_packages') {
+        const handler = new ListCommunityPackagesHandler();
+        result = await handler.execute(args);
+      } else if (toolName === 'install_community_package') {
+        const handler = new InstallCommunityPackageHandler();
+        result = await handler.execute(args);
+      } else if (toolName === 'update_community_package') {
+        const handler = new UpdateCommunityPackageHandler();
+        result = await handler.execute(args);
+      } else if (toolName === 'uninstall_community_package') {
+        const handler = new UninstallCommunityPackageHandler();
         result = await handler.execute(args);
       } else {
         throw new Error(`Unknown tool: ${toolName}`);

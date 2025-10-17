@@ -17,6 +17,8 @@ export { ErrorCode } from './error-codes.js';
  * n8n API Error class for handling errors from the n8n API
  */
 export class N8nApiError extends SdkMcpError {
+  public statusCode?: number;
+  public details?: unknown;
   constructor(message: string, statusCode?: number, details?: unknown) {
     // Map HTTP status codes to appropriate MCP error codes
     let errorCode = ErrorCode.InternalError;
@@ -32,6 +34,8 @@ export class N8nApiError extends SdkMcpError {
     }
     
     super(errorCode, formatErrorMessage(message, statusCode, details));
+    this.statusCode = statusCode;
+    this.details = details;
   }
 }
 

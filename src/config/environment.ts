@@ -33,24 +33,23 @@ export interface EnvConfig {
  * Load environment variables from .env file if present
  */
 export function loadEnvironmentVariables(): void {
-  const {
-    N8N_API_URL,
-    N8N_API_KEY,
-    N8N_WEBHOOK_USERNAME,
-    N8N_WEBHOOK_PASSWORD
-  } = process.env;
+  // Only load from .env when core required variables are not already present.
+  // This prevents introducing additional variables (like SERVER_MODE, etc.)
+  // when the caller has already provided the core configuration via env.
+  const hasCoreEnv = Boolean(
+    process.env[ENV_VARS.N8N_API_URL] && process.env[ENV_VARS.N8N_API_KEY]
+  );
 
-  if (
-    !N8N_API_URL &&
-    !N8N_API_KEY &&
-    !N8N_WEBHOOK_USERNAME &&
-    !N8N_WEBHOOK_PASSWORD
-  ) {
-    const projectRoot = findConfig('package.json');
-    if (projectRoot) {
-      const envPath = path.resolve(path.dirname(projectRoot), '.env');
-      dotenv.config({ path: envPath });
-    }
+  if (hasCoreEnv) {
+    return;
+  }
+
+  // Attempt to load .env from project root. dotenv will not override
+  // variables that are already set in the environment.
+  const projectRoot = findConfig('package.json');
+  if (projectRoot) {
+    const envPath = path.resolve(path.dirname(projectRoot), '.env');
+    dotenv.config({ path: envPath });
   }
 }
 

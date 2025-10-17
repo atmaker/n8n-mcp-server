@@ -143,6 +143,9 @@ Configure the following environment variables:
 | `N8N_WEBHOOK_USERNAME` | Username for webhook authentication (if using webhooks) | `username` |
 | `N8N_WEBHOOK_PASSWORD` | Password for webhook authentication | `password` |
 | `DEBUG` | Enable debug logging (optional) | `true` or `false` |
+| `SERVER_MODE` | MCP transport mode: `stdio` (default), `streamable`, or `sse` | `streamable` |
+| `SERVER_PORT` | HTTP port when using `streamable` or `sse` modes | `3017` |
+| `MCP_API_KEY` | Optional API key required for HTTP modes (send via `Authorization: Bearer <key>` or `X-API-KEY`) | `sk-...` |
 
 ### Generating an n8n API Key
 
@@ -210,6 +213,169 @@ After building the server (`npm run build`), you need to configure your AI assis
 *   Use the correct path separator for your operating system (forward slashes `/` for macOS/Linux, double backslashes `\\` for Windows).
 *   Ensure you provide the correct `N8N_API_URL` (including `/api/v1`) and `N8N_API_KEY`.
 *   The server needs to be built (`npm run build`) before the assistant can run the `build/index.js` file.
+
+## HTTP Transport Modes
+
+The server supports multiple MCP transports. By default it uses `stdio`.
+
+- `stdio` (default): For local MCP clients that spawn the process.
+- `streamable` (recommended): Streamable HTTP transport per MCP 2025-03-26.
+- `sse` (legacy): Deprecated HTTP+SSE transport for older clients.
+
+Configure via environment variables:
+
+- `SERVER_MODE`: `stdio` | `streamable` | `sse`
+- `SERVER_PORT`: Port for HTTP server in `streamable`/`sse` modes
+- `MCP_API_KEY` (optional): Require API key for HTTP requests
+
+### Streamable HTTP (recommended)
+
+- Endpoint: `http://localhost:<SERVER_PORT>/mcp`
+- Methods: `GET`, `POST`, `DELETE`
+- Headers after initialization: include `MCP-Session-Id` and `MCP-Protocol-Version: 2025-03-26`
+- Auth (optional):
+  - `Authorization: Bearer <MCP_API_KEY>` or `X-API-KEY: <MCP_API_KEY>`
+
+Start the server in Streamable mode:
+
+```bash
+SERVER_MODE=streamable SERVER_PORT=3017 npm start
+```
+
+Initialize the MCP session (POST):
+
+```bash
+curl -N -i \
+  -X POST 'http://localhost:3017/mcp' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer '"$MCP_API_KEY" \
+  --data-binary '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2025-03-26",
+      "capabilities": {},
+      "clientInfo": { "name": "curl", "version": "8" }
+    }
+  }'
+```
+
+Note the `mcp-session-id` header in the response; include it in subsequent requests.
+
+Open an SSE stream for notifications (GET):
+
+```bash
+curl -N -i \
+  'http://localhost:3017/mcp' \
+  -H 'Accept: text/event-stream' \
+  -H 'MCP-Session-Id: <SESSION_ID_FROM_INIT>' \
+  -H 'MCP-Protocol-Version: 2025-03-26' \
+  -H 'Authorization: Bearer '"$MCP_API_KEY"
+```
+
+List tools (POST `tools/list`):
+
+```bash
+curl -N -i \
+  -X POST 'http://localhost:3017/mcp' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'Content-Type: application/json' \
+  -H 'MCP-Session-Id: <SESSION_ID_FROM_INIT>' \
+  -H 'MCP-Protocol-Version: 2025-03-26' \
+  -H 'Authorization: Bearer '"$MCP_API_KEY" \
+  --data-binary '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/list",
+    "params": {}
+  }'
+```
+
+Call an n8n tool (POST `tools/call`):
+
+```bash
+curl -N -i \
+  -X POST 'http://localhost:3017/mcp' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H 'Content-Type: application/json' \
+  -H 'MCP-Session-Id: <SESSION_ID_FROM_INIT>' \
+  -H 'MCP-Protocol-Version: 2025-03-26' \
+  -H 'Authorization: Bearer '"$MCP_API_KEY" \
+  --data-binary '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "list_workflows",
+      "arguments": {}
+    }
+  }'
+```
+
+### Legacy HTTP+SSE (deprecated)
+
+- Endpoints: `GET /sse` to open the stream, `POST /messages?sessionId=<id>` to send messages
+- Auth (optional): same as Streamable HTTP
+
+Start the server in legacy SSE mode:
+
+```bash
+SERVER_MODE=sse SERVER_PORT=3018 npm start
+```
+
+1) Open the SSE stream (terminal A):
+
+```bash
+curl -N -i \
+  'http://localhost:3018/sse' \
+  -H 'Accept: text/event-stream' \
+  -H 'Authorization: Bearer '"$MCP_API_KEY"
+```
+
+You will receive an event like `event: endpoint` with `data: /messages?sessionId=<id>`.
+
+2) Initialize via POST (terminal B):
+
+```bash
+curl -i \
+  -X POST 'http://localhost:3018/messages?sessionId=<SESSION_ID>' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer '"$MCP_API_KEY" \
+  --data-binary '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "capabilities": {},
+      "clientInfo": { "name": "curl", "version": "8" }
+    }
+  }'
+```
+
+3) Call a tool:
+
+```bash
+curl -i \
+  -X POST 'http://localhost:3018/messages?sessionId=<SESSION_ID>' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer '"$MCP_API_KEY" \
+  --data-binary '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "list_workflows",
+      "arguments": {}
+    }
+  }'
+```
+
+### Security notes
+
+- For HTTP exposure, set `MCP_API_KEY` and pass it via `Authorization: Bearer <key>` or `X-API-KEY`.
+- Consider running behind a reverse proxy/ingress for TLS termination if exposing beyond localhost.
 
 ## Available Tools
 

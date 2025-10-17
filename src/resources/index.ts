@@ -25,6 +25,16 @@ import {
   getExecutionStatsResourceMetadata,
   getExecutionStatsResourceUri,
 } from './static/execution-stats.js';
+import {
+  getNodesResource,
+  getNodesResourceMetadata,
+  getNodesResourceUri,
+} from './static/nodes.js';
+import {
+  getCommunityPackagesResource,
+  getCommunityPackagesResourceMetadata,
+  getCommunityPackagesResourceUri,
+} from './static/community-packages.js';
 
 // Import dynamic resource handlers
 import {
@@ -37,6 +47,11 @@ import {
   getExecutionResourceTemplateMetadata,
   extractExecutionIdFromUri,
 } from './dynamic/execution.js';
+import {
+  getNodeResource,
+  getNodeResourceTemplateMetadata,
+  extractNodeTypeFromUri,
+} from './dynamic/node.js';
 
 /**
  * Set up resource handlers for the MCP server
@@ -44,12 +59,16 @@ import {
  * @param server MCP server instance
  * @param envConfig Environment configuration
  */
-export function setupResourceHandlers(server: Server, envConfig: EnvConfig): void {
+export function setupResourceHandlers(
+  server: Server,
+  envConfig: EnvConfig,
+  injectedApiService?: ReturnType<typeof createApiService>
+): void {
   // Set up static resources
   setupStaticResources(server, envConfig);
 
   // Set up dynamic resources
-  setupDynamicResources(server, envConfig);
+  setupDynamicResources(server, envConfig, injectedApiService);
 }
 
 /**
@@ -65,6 +84,8 @@ function setupStaticResources(server: Server, _envConfig: EnvConfig): void {
       resources: [
         getWorkflowsResourceMetadata(),
         getExecutionStatsResourceMetadata(),
+        getNodesResourceMetadata(),
+        getCommunityPackagesResourceMetadata(),
       ],
     };
   });
@@ -76,8 +97,12 @@ function setupStaticResources(server: Server, _envConfig: EnvConfig): void {
  * @param server MCP server instance
  * @param envConfig Environment configuration
  */
-function setupDynamicResources(server: Server, envConfig: EnvConfig): void {
-  const apiService = createApiService(envConfig);
+function setupDynamicResources(
+  server: Server,
+  envConfig: EnvConfig,
+  injectedApiService?: ReturnType<typeof createApiService>
+): void {
+  const apiService = injectedApiService ?? createApiService(envConfig);
   
   server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
     // Return all available dynamic resource templates
@@ -85,6 +110,7 @@ function setupDynamicResources(server: Server, envConfig: EnvConfig): void {
       resourceTemplates: [
         getWorkflowResourceTemplateMetadata(),
         getExecutionResourceTemplateMetadata(),
+        getNodeResourceTemplateMetadata(),
       ],
     };
   });
@@ -120,8 +146,48 @@ function setupDynamicResources(server: Server, envConfig: EnvConfig): void {
           ],
         };
       }
+
+      if (uri === getNodesResourceUri()) {
+        const content = await getNodesResource(apiService);
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: 'application/json',
+              text: content,
+            },
+          ],
+        };
+      }
+
+      if (uri === getCommunityPackagesResourceUri()) {
+        const content = await getCommunityPackagesResource(apiService);
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: 'application/json',
+              text: content,
+            },
+          ],
+        };
+      }
       
       // Handle dynamic resources
+      const nodeType = extractNodeTypeFromUri(uri);
+      if (nodeType) {
+        const content = await getNodeResource(apiService, nodeType);
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: 'application/json',
+              text: content,
+            },
+          ],
+        };
+      }
+
       const workflowId = extractWorkflowIdFromUri(uri);
       if (workflowId) {
         const content = await getWorkflowResource(apiService, workflowId);

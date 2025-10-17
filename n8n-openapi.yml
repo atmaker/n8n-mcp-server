@@ -8,7 +8,7 @@ info:
   license:
     name: Sustainable Use License
     url: https://github.com/n8n-io/n8n/blob/master/LICENSE.md
-  version: 1.1.1
+  version: 1.1.2
 servers:
   - url: /api/v1
 security:
@@ -32,6 +32,10 @@ tags:
     description: Operations about variables
   - name: Projects
     description: Operations about projects
+  - name: Nodes
+    description: Operations about nodes
+  - name: Community Packages
+    description: Operations about community packages
 externalDocs:
   description: n8n API documentation
   url: https://docs.n8n.io/api/
@@ -945,6 +949,31 @@ paths:
           $ref: '#/components/responses/unauthorized'
         '404':
           $ref: '#/components/responses/notFound'
+    put:
+      x-eov-operation-id: updateVariable
+      x-eov-operation-handler: v1/handlers/variables/variables.handler
+      tags:
+        - Variables
+      summary: Update a variable
+      description: Update a variable from your instance.
+      requestBody:
+        description: Payload for variable to update.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/variable'
+        required: true
+      responses:
+        '204':
+          description: Operation successful.
+        '400':
+          $ref: '#/components/responses/badRequest'
+        '401':
+          $ref: '#/components/responses/unauthorized'
+        '403':
+          $ref: '#/components/responses/forbidden'
+        '404':
+          $ref: '#/components/responses/notFound'
   /projects:
     post:
       x-eov-operation-id: createProject
@@ -952,7 +981,7 @@ paths:
       tags:
         - Projects
       summary: Create a project
-      description: Create a project in your instance.
+      description: Create a project on your instance.
       requestBody:
         description: Payload for project to create.
         content:
@@ -995,7 +1024,12 @@ paths:
       summary: Delete a project
       description: Delete a project from your instance.
       parameters:
-        - $ref: '#/components/parameters/projectId'
+        - in: path
+          name: projectId
+          description: The ID of the project.
+          required: true
+          schema:
+            type: string
       responses:
         '204':
           description: Operation successful.
@@ -1009,9 +1043,16 @@ paths:
       x-eov-operation-id: updateProject
       x-eov-operation-handler: v1/handlers/projects/projects.handler
       tags:
-        - Project
+        - Projects
       summary: Update a project
-      description: Update a project.
+      description: Update a project on your instance.
+      parameters:
+        - in: path
+          name: projectId
+          description: The ID of the project.
+          required: true
+          schema:
+            type: string
       requestBody:
         description: Updated project object.
         content:
@@ -1030,6 +1071,527 @@ paths:
           $ref: '#/components/responses/forbidden'
         '404':
           $ref: '#/components/responses/notFound'
+  /projects/{projectId}/users:
+    post:
+      x-eov-operation-id: addUsersToProject
+      x-eov-operation-handler: v1/handlers/projects/projects.handler
+      tags:
+        - Projects
+      summary: Add one or more users to a project
+      description: Add one or more users to a project on your instance.
+      parameters:
+        - name: projectId
+          in: path
+          description: The ID of the project.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Payload containing an array of one or more users to add to the project.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                relations:
+                  type: array
+                  description: A list of userIds and roles to add to the project.
+                  items:
+                    type: object
+                    properties:
+                      userId:
+                        type: string
+                        description: The unique identifier of the user.
+                        example: 91765f0d-3b29-45df-adb9-35b23937eb92
+                      role:
+                        type: string
+                        description: The role assigned to the user in the project.
+                        example: project:viewer
+                    required:
+                      - userId
+                      - role
+              required:
+                - relations
+      responses:
+        '201':
+          description: Operation successful.
+        '401':
+          $ref: '#/components/responses/unauthorized'
+        '403':
+          $ref: '#/components/responses/forbidden'
+        '404':
+          $ref: '#/components/responses/notFound'
+  /projects/{projectId}/users/{userId}:
+    delete:
+      x-eov-operation-id: deleteUserFromProject
+      x-eov-operation-handler: v1/handlers/projects/projects.handler
+      tags:
+        - Projects
+      summary: Delete a user from a project
+      description: Delete a user from a project on your instance.
+      parameters:
+        - name: projectId
+          in: path
+          description: The ID of the project.
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          description: The ID of the user.
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Operation successful.
+        '401':
+          $ref: '#/components/responses/unauthorized'
+        '403':
+          $ref: '#/components/responses/forbidden'
+        '404':
+          $ref: '#/components/responses/notFound'
+    patch:
+      x-eov-operation-id: changeUserRoleInProject
+      x-eov-operation-handler: v1/handlers/projects/projects.handler
+      tags:
+        - Projects
+      summary: Change a user's role in a project
+      description: Change a user's role in a project.
+      parameters:
+        - name: projectId
+          in: path
+          description: The ID of the project.
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          description: The ID of the user.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Payload containing the new role to assign to the project user.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  description: The role assigned to the user in the project.
+                  example: project:viewer
+              required:
+                - role
+      responses:
+        '204':
+          description: Operation successful.
+        '401':
+          $ref: '#/components/responses/unauthorized'
+        '403':
+          $ref: '#/components/responses/forbidden'
+        '404':
+          $ref: '#/components/responses/notFound'
+  /nodes:
+    get:
+      x-eov-operation-id: getNodes
+      x-eov-operation-handler: v1/handlers/nodes/nodes.handler
+      tags:
+        - Nodes
+      summary: Retrieve installed nodes or search for a specific node
+      description: Retrieve a list of installed nodes or search for a specific installed node by node type
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: nodeType
+          in: query
+          description: Optional filter by node type
+          required: false
+          schema:
+            type: string
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/order'
+      responses:
+        '200':
+          description: A paginated list of installed nodes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/installedNode'
+                    description: List of installed nodes with their details
+                  nextCursor:
+                    type: string
+                    description: Cursor for the next page of results
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/unauthorized'
+        '403':
+          $ref: '#/components/responses/forbidden'
+        '404':
+          $ref: '#/components/responses/notFound'
+  /nodes/categories:
+    get:
+      x-eov-operation-id: getNodeCategories
+      x-eov-operation-handler: v1/handlers/nodes/nodes.handler
+      tags:
+        - Nodes
+      summary: Retrieve node categories
+      description: Retrieve a list of all available node categories
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+        - name: sort
+          in: query
+          description: Field to sort results by.
+          required: false
+          schema:
+            type: string
+            enum:
+              - name
+            example: name
+            default: name
+        - name: order
+          in: query
+          description: Order of results.
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            example: asc
+            default: asc
+      responses:
+        '200':
+          description: A list of node categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: string
+                    description: List of node categories
+                  nextCursor:
+                    type: string
+                    description: Cursor for the next page of results
+                    nullable: true
+        '400':
+          $ref: '#/components/responses/badRequest'
+        '401':
+          $ref: '#/components/responses/unauthorized'
+        '403':
+          $ref: '#/components/responses/forbidden'
+        '404':
+          $ref: '#/components/responses/notFound'
+  /nodes/{nodeType}:
+    get:
+      x-eov-operation-id: getNode
+      x-eov-operation-handler: v1/handlers/nodes/nodes.handler
+      tags:
+        - Nodes
+      summary: Retrieve details of a single node
+      description: Retrieve details of a specific node
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: nodeType
+          in: path
+          description: The type of the node to retrieve
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Details of the installed node
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  node:
+                    $ref: '#/components/schemas/installedNode'
+                  installedPackages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/installedPackage'
+        '400':
+          description: Bad request - missing node type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/unauthorized'
+        '403':
+          $ref: '#/components/responses/forbidden'
+        '404':
+          description: Installed node not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+  /community-packages:
+    get:
+      x-eov-operation-id: listCommunityPackages
+      x-eov-operation-handler: v1/handlers/community-packages/community-packages.handler
+      tags:
+        - Community Packages
+      summary: Retrieve installed community packages
+      description: Returns all installed community packages.
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Operation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        packageName:
+                          type: string
+                        installedVersion:
+                          type: string
+                        updateAvailable:
+                          type: boolean
+              examples:
+                success:
+                  value:
+                    data:
+                      - packageName: n8n-nodes-foo
+                        installedVersion: 1.0.0
+                        updateAvailable: false
+        '401':
+          $ref: '#/components/responses/unauthorized'
+        '403':
+          $ref: '#/components/responses/forbidden'
+    post:
+      x-eov-operation-id: installCommunityPackage
+      x-eov-operation-handler: v1/handlers/community-packages/community-packages.handler
+      tags:
+        - Community Packages
+      summary: Install a community package
+      description: Install a community package by npm name, optionally a specific version or with checksum verification.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                version:
+                  type: string
+                checksum:
+                  type: string
+            examples:
+              installLatest:
+                value:
+                  name: n8n-nodes-foo
+              installVersion:
+                value:
+                  name: n8n-nodes-foo
+                  version: 1.2.3
+              installChecksum:
+                value:
+                  name: n8n-nodes-foo
+                  checksum: sha512-abcdef...
+      responses:
+        '200':
+          description: Installation triggered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                success:
+                  value:
+                    message: Installation started for n8n-nodes-foo
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                missingParameter:
+                  value:
+                    message: 'Missing required parameter: name'
+        '401':
+          $ref: '#/components/responses/unauthorized'
+        '403':
+          $ref: '#/components/responses/forbidden'
+    patch:
+      x-eov-operation-id: updateCommunityPackage
+      x-eov-operation-handler: v1/handlers/community-packages/community-packages.handler
+      tags:
+        - Community Packages
+      summary: Update a community package
+      description: Update a community package to a specific version or verify by checksum.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                version:
+                  type: string
+                checksum:
+                  type: string
+            examples:
+              updateVersion:
+                value:
+                  name: n8n-nodes-foo
+                  version: 1.3.0
+              verifyChecksum:
+                value:
+                  name: n8n-nodes-foo
+                  checksum: sha512-abcdef...
+      responses:
+        '200':
+          description: Update triggered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                success:
+                  value:
+                    message: Update started for n8n-nodes-foo
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                missingName:
+                  value:
+                    message: 'Missing required parameter: name'
+        '401':
+          $ref: '#/components/responses/unauthorized'
+        '403':
+          $ref: '#/components/responses/forbidden'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                notInstalled:
+                  value:
+                    message: Node not installed
+    delete:
+      x-eov-operation-id: uninstallCommunityPackage
+      x-eov-operation-handler: v1/handlers/community-packages/community-packages.handler
+      tags:
+        - Community Packages
+      summary: Uninstall a community package
+      description: Uninstall a community package by npm name.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Uninstallation triggered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                success:
+                  value:
+                    message: Uninstallation started for n8n-nodes-foo
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                missingName:
+                  value:
+                    message: 'Missing required parameter: name'
+        '401':
+          $ref: '#/components/responses/unauthorized'
+        '403':
+          $ref: '#/components/responses/forbidden'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                notInstalled:
+                  value:
+                    message: Node not installed
 components:
   schemas:
     audit:
@@ -1054,8 +1616,7 @@ components:
             sections:
               - title: Expressions in "Execute Query" fields in SQL nodes
                 description: This SQL node has an expression in the "Query" field of an "Execute Query" operation. Building a SQL query with an expression may lead to a SQL injection attack.
-                recommendation: Consider using the "Query Parameters" field to pass parameters to the query
-                or validating the input of the expression in the "Query" field.: null
+                recommendation: Consider using the "Query Parameters" field to pass parameters to the query, or validating the input of the expression in the "Query" field.
                 location:
                   - kind: node
                     workflowId: '1'
@@ -1070,8 +1631,7 @@ components:
             sections:
               - title: Nodes that interact with the filesystem
                 description: This node reads from and writes to any accessible file in the host filesystem. Sensitive file content may be manipulated through a node operation.
-                recommendation: Consider protecting any sensitive files in the host filesystem
-                or refactoring the workflow so that it does not require host filesystem interaction.: null
+                recommendation: Consider protecting any sensitive files in the host filesystem, or refactoring the workflow so that it does not require host filesystem interaction.
                 location:
                   - kind: node
                     workflowId: '1'
@@ -1086,8 +1646,7 @@ components:
             sections:
               - title: Community nodes
                 description: This node is sourced from the community. Community nodes are not vetted by the n8n team and have full access to the host system.
-                recommendation: Consider reviewing the source code in any community nodes installed in this n8n instance
-                and uninstalling any community nodes no longer used.: null
+                recommendation: Consider reviewing the source code in any community nodes installed in this n8n instance, and uninstalling any community nodes no longer used.
                 location:
                   - kind: community
                     nodeType: n8n-nodes-test.test
@@ -1099,8 +1658,7 @@ components:
             sections:
               - title: Unprotected webhooks in instance
                 description: These webhook nodes have the "Authentication" field set to "None" and are not directly connected to a node to validate the payload. Every unprotected webhook allows your workflow to be called by any third party who knows the webhook URL.
-                recommendation: Consider setting the "Authentication" field to an option other than "None"
-                or validating the payload with one of the following nodes.: null
+                recommendation: Consider setting the "Authentication" field to an option other than "None", or validating the payload with one of the following nodes.
                 location:
                   - kind: community
                     nodeType: n8n-nodes-test.test
@@ -1357,6 +1915,38 @@ components:
         executionOrder:
           type: string
           example: v1
+    sharedWorkflow:
+      type: object
+      additionalProperties: false
+      properties:
+        role:
+          type: string
+          example: workflow:owner
+        workflowId:
+          type: string
+          example: 2tUt1wbLX592XDdX
+        projectId:
+          type: string
+          example: 2tUt1wbLX592XDdX
+        project:
+          type: object
+          properties:
+            id:
+              type: string
+              readOnly: true
+            name:
+              type: string
+            type:
+              type: string
+              readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
     workflow:
       type: object
       additionalProperties: false
@@ -1411,6 +2001,10 @@ components:
           items:
             $ref: '#/components/schemas/tag'
           readOnly: true
+        shared:
+          type: array
+          items:
+            $ref: '#/components/schemas/sharedWorkflow'
     workflowList:
       type: object
       properties:
@@ -1615,6 +2209,110 @@ components:
           description: Paginate through projects by setting the cursor parameter to a nextCursor attribute returned by a previous request. Default value fetches the first "page" of the collection.
           nullable: true
           example: MTIzZTQ1NjctZTg5Yi0xMmQzLWE0NTYtNDI2NjE0MTc0MDA
+    installedNode:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          example: Jira
+        type:
+          type: string
+          example: n8n-nodes-base.Jira
+        displayName:
+          type: string
+          example: HTTP Request
+        description:
+          type: string
+          example: Makes a HTTP request and returns the response data
+        icon:
+          type: string
+          example: file:httpRequest.svg
+        iconUrl:
+          type: string
+          example: https://example.com/icon.svg
+        group:
+          type: array
+          items:
+            type: string
+          example:
+            - development
+        version:
+          oneOf:
+            - type: number
+            - type: array
+              items:
+                type: number
+          example: 1
+        defaults:
+          type: object
+          example:
+            name: HTTP Request
+        inputs:
+          type: array
+          items:
+            type: string
+          example:
+            - main
+        outputs:
+          type: array
+          items:
+            type: string
+          example:
+            - main
+        properties:
+          type: array
+          items:
+            type: object
+        subtitle:
+          type: string
+        typeVersion:
+          type: number
+          example: 1
+        codex:
+          type: object
+          properties:
+            categories:
+              type: array
+              items:
+                type: string
+            resources:
+              type: object
+              properties:
+                primaryDocumentation:
+                  type: array
+                  items:
+                    type: object
+                credentialDocumentation:
+                  type: array
+                  items:
+                    type: object
+            subcategories:
+              type: object
+      required:
+        - name
+        - type
+    installedPackage:
+      type: object
+      properties:
+        name:
+          type: string
+          example: n8n-nodes-notion
+        version:
+          type: string
+          example: 1.0.0
+        nodeCount:
+          type: number
+          example: 5
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/installedNode'
+      required:
+        - name
+        - version
+        - nodeCount
+        - nodes
     error:
       required:
         - message
@@ -1802,13 +2500,29 @@ components:
       required: true
       schema:
         type: string
-    projectId:
-      name: projectId
-      in: path
-      description: The ID of the project.
-      required: true
+    sort:
+      name: sort
+      in: query
+      description: Field to sort results by.
+      required: false
       schema:
         type: string
+        enum:
+          - name
+        example: name
+        default: name
+    order:
+      name: order
+      in: query
+      description: Sort order for the results.
+      required: false
+      schema:
+        type: string
+        enum:
+          - asc
+          - desc
+        example: asc
+        default: asc
     Cursor:
       $ref: '#/components/parameters/cursor'
     Limit:
